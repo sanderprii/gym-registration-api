@@ -80,6 +80,11 @@ cd gym-registration-api
 ```
 
 2. **Install dependencies**
+
+```bash
+apt install npm
+```
+
 ```bash
 npm install
 ```
