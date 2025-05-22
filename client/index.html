@@ -1,33 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="et">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gym Registration - Login</title>
+    <title>Jõusaal - Sisselogimine</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="login-container">
     <div class="login-form">
-        <h2>Gym Registration System</h2>
+        <h2>Jõusaali Registreerimissüsteem</h2>
         <div id="error-message" class="error-message"></div>
 
         <form id="login-form">
             <div class="form-group">
-                <label for="email">Email:</label>
+                <label for="email">E-post:</label>
                 <input type="email" id="email" name="email" required>
+                <div id="email-validation" class="validation-message"></div>
             </div>
 
             <div class="form-group">
-                <label for="password">Password:</label>
+                <label for="password">Parool:</label>
                 <input type="password" id="password" name="password" required>
+                <div id="password-validation" class="validation-message"></div>
             </div>
 
-            <button type="submit" class="btn">Login</button>
+            <button type="submit" class="btn">Logi sisse</button>
         </form>
 
         <div class="mt-20">
-            <p>Don't have an account? <a href="#" id="register-link">Register here</a></p>
+            <p>Pole kontot? <a href="#" id="register-link">Registreeru siin</a></p>
         </div>
     </div>
 </div>
@@ -36,31 +38,37 @@
 <div id="register-modal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h2>Register New Account</h2>
+        <h2>Registreeri uus konto</h2>
         <div id="register-error" class="error-message"></div>
 
         <form id="register-form">
             <div class="form-group">
-                <label for="reg-name">Name:</label>
+                <label for="reg-name">Nimi:</label>
                 <input type="text" id="reg-name" name="name" required>
+                <div id="name-validation" class="validation-message"></div>
             </div>
 
             <div class="form-group">
-                <label for="reg-email">Email:</label>
+                <label for="reg-email">E-post:</label>
                 <input type="email" id="reg-email" name="email" required>
+                <div id="reg-email-validation" class="validation-message"></div>
             </div>
 
             <div class="form-group">
-                <label for="reg-password">Password:</label>
+                <label for="reg-password">Parool:</label>
                 <input type="password" id="reg-password" name="password" required>
+                <div id="reg-password-validation" class="validation-message"></div>
+                <small class="password-requirements">
+                    Parool peab olema vähemalt 8 tähemärki pikk ja ei või sisaldada ainult tühikuid
+                </small>
             </div>
 
             <div class="form-group">
-                <label for="reg-timezone">Timezone:</label>
-                <input type="text" id="reg-timezone" name="timezone" placeholder="e.g., Europe/Tallinn">
+                <label for="reg-timezone">Ajavöönd:</label>
+                <input type="text" id="reg-timezone" name="timezone" placeholder="nt. Europe/Tallinn">
             </div>
 
-            <button type="submit" class="btn">Register</button>
+            <button type="submit" class="btn">Registreeru</button>
         </form>
     </div>
 </div>
@@ -72,6 +80,83 @@
 <script>
     // Check if already logged in
     Auth.redirectIfLoggedIn();
+
+    // Real-time validation for login form
+    document.getElementById('email').addEventListener('input', function() {
+        const email = this.value.trim();
+        const validationElement = document.getElementById('email-validation');
+
+        if (email === '') {
+            validationElement.style.display = 'none';
+            return;
+        }
+
+        if (Auth.validateEmail(email)) {
+            validationElement.textContent = 'E-posti aadress on kehtiv';
+            validationElement.style.color = 'green';
+            validationElement.style.display = 'block';
+        } else {
+            validationElement.textContent = 'Vigane e-posti aadress';
+            validationElement.style.color = 'red';
+            validationElement.style.display = 'block';
+        }
+    });
+
+    document.getElementById('password').addEventListener('input', function() {
+        const password = this.value;
+        const validationElement = document.getElementById('password-validation');
+        Auth.displayPasswordValidation(password, validationElement);
+    });
+
+    // Real-time validation for registration form
+    document.getElementById('reg-name').addEventListener('input', function() {
+        const name = this.value.trim();
+        const validationElement = document.getElementById('name-validation');
+
+        if (name === '') {
+            validationElement.textContent = 'Nimi on nõutav';
+            validationElement.style.color = 'red';
+            validationElement.style.display = 'block';
+        } else if (this.value !== this.value.trim()) {
+            validationElement.textContent = 'Nimi ei või alata ega lõppeda tühikutega';
+            validationElement.style.color = 'red';
+            validationElement.style.display = 'block';
+        } else {
+            validationElement.textContent = 'Nimi on kehtiv';
+            validationElement.style.color = 'green';
+            validationElement.style.display = 'block';
+        }
+    });
+
+    document.getElementById('reg-email').addEventListener('input', function() {
+        const email = this.value.trim();
+        const validationElement = document.getElementById('reg-email-validation');
+
+        if (email === '') {
+            validationElement.style.display = 'none';
+            return;
+        }
+
+        if (this.value !== this.value.trim()) {
+            validationElement.textContent = 'E-post ei või alata ega lõppeda tühikutega';
+            validationElement.style.color = 'red';
+            validationElement.style.display = 'block';
+        } else if (Auth.validateEmail(email)) {
+            validationElement.textContent = 'E-posti aadress on kehtiv';
+            validationElement.style.color = 'green';
+            validationElement.style.display = 'block';
+        } else {
+            validationElement.textContent = 'Vigane e-posti aadress';
+            validationElement.style.color = 'red';
+            validationElement.style.display = 'block';
+        }
+    });
+
+    document.getElementById('reg-password').addEventListener('input', function() {
+        const password = this.value;
+        const validationElement = document.getElementById('reg-password-validation');
+        Auth.displayPasswordValidation(password, validationElement);
+    });
 
     // Login form handler
     document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -104,11 +189,19 @@
 
     closeModal.addEventListener('click', () => {
         registerModal.style.display = 'none';
+        // Clear validation messages
+        document.querySelectorAll('.validation-message').forEach(el => {
+            el.style.display = 'none';
+        });
     });
 
     window.addEventListener('click', (e) => {
         if (e.target === registerModal) {
             registerModal.style.display = 'none';
+            // Clear validation messages
+            document.querySelectorAll('.validation-message').forEach(el => {
+                el.style.display = 'none';
+            });
         }
     });
 
@@ -121,15 +214,67 @@
         const errorDiv = document.getElementById('register-error');
 
         try {
-            await api.createTrainee(userData);
-            alert('Registration successful! Please login with your credentials.');
+            // Validate and trim fields
+            const { trimmedFields, errors } = Auth.trimAndValidateFields(
+                userData,
+                ['name', 'email', 'password']
+            );
+
+            if (errors.length > 0) {
+                throw new Error(errors.join(', '));
+            }
+
+            // Validate email format
+            if (!Auth.validateEmail(trimmedFields.email)) {
+                throw new Error('Vigane e-posti aadress');
+            }
+
+            // Validate password
+            const passwordValidation = Auth.validatePassword(trimmedFields.password);
+            if (!passwordValidation.isValid) {
+                throw new Error(passwordValidation.message);
+            }
+
+            // Check for whitespace issues in original values
+            if (userData.name !== userData.name.trim()) {
+                throw new Error('Nimi ei või alata ega lõppeda tühikutega');
+            }
+            if (userData.email !== userData.email.trim()) {
+                throw new Error('E-post ei või alata ega lõppeda tühikutega');
+            }
+
+            await api.createTrainee(trimmedFields);
+            alert('Registreerimine õnnestus! Palun logi sisse oma andmetega.');
             registerModal.style.display = 'none';
             document.getElementById('register-form').reset();
+            // Clear validation messages
+            document.querySelectorAll('.validation-message').forEach(el => {
+                el.style.display = 'none';
+            });
         } catch (error) {
             errorDiv.textContent = error.message;
             errorDiv.style.display = 'block';
         }
     });
 </script>
+
+<style>
+    .validation-message {
+        font-size: 12px;
+        margin-top: 5px;
+        display: none;
+    }
+
+    .password-requirements {
+        font-size: 11px;
+        color: #666;
+        margin-top: 5px;
+        display: block;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+</style>
 </body>
 </html>

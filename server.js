@@ -15,8 +15,6 @@ require('dotenv').config();
 // Initialize Prisma client
 const prisma = new PrismaClient();
 
-
-
 // Load the OpenAPI specification
 const openapiDocumentEn = yaml.load(path.join(__dirname, 'openapi.yaml'));
 const openapiDocumentEt = yaml.load(path.join(__dirname, 'openapi-et.yaml'));
@@ -28,6 +26,68 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 // Track revoked tokens for logout (in production use Redis or database)
 const revokedTokens = new Set();
+
+// ---------------------------------------------------------------------------
+// Validation and utility functions
+// ---------------------------------------------------------------------------
+
+// Password validation function
+function validatePassword(password) {
+    if (!password || typeof password !== 'string') {
+        return { isValid: false, message: 'Password is required' };
+    }
+
+    const trimmedPassword = password.trim();
+
+    if (trimmedPassword.length === 0) {
+        return { isValid: false, message: 'Password cannot be empty or contain only spaces' };
+    }
+
+    if (trimmedPassword.length < 8) {
+        return { isValid: false, message: 'Password must be at least 8 characters long' };
+    }
+
+    if (trimmedPassword !== password) {
+        return { isValid: false, message: 'Password cannot start or end with spaces' };
+    }
+
+    // Check if password contains at least one non-space character
+    if (!/\S/.test(password)) {
+        return { isValid: false, message: 'Password cannot contain only spaces' };
+    }
+
+    return { isValid: true, message: 'Password is valid' };
+}
+
+// Field trimming and validation function
+function trimAndValidateFields(fields, requiredFields = []) {
+    const trimmedFields = {};
+    const errors = [];
+
+    // Trim all string fields
+    Object.keys(fields).forEach(key => {
+        if (typeof fields[key] === 'string') {
+            trimmedFields[key] = fields[key].trim();
+        } else {
+            trimmedFields[key] = fields[key];
+        }
+    });
+
+    // Check required fields after trimming
+    requiredFields.forEach(field => {
+        if (!trimmedFields[field] || trimmedFields[field] === '') {
+            errors.push(`${field} is required and cannot be empty`);
+        }
+    });
+
+    return { trimmedFields, errors };
+}
+
+// Email validation function
+function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
 
 // Middleware
 app.use(cors());
@@ -84,10 +144,17 @@ function authenticateToken(req, res, next) {
 // Create session (Login)
 app.post('/sessions', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { trimmedFields, errors } = trimAndValidateFields(req.body, ['email', 'password']);
 
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
+        if (errors.length > 0) {
+            return res.status(400).json({ error: errors.join(', ') });
+        }
+
+        const { email, password } = trimmedFields;
+
+        // Validate email format
+        if (!validateEmail(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
         }
 
         const trainee = await prisma.trainee.findUnique({
@@ -199,10 +266,23 @@ app.get('/trainees', authenticateToken, async (req, res) => {
 // Create a new trainee
 app.post('/trainees', async (req, res) => {
     try {
-        const { name, email, password, timezone } = req.body;
+        const { trimmedFields, errors } = trimAndValidateFields(req.body, ['name', 'email', 'password']);
 
-        if (!name || !email || !password) {
-            return res.status(400).json({ error: 'Name, email, and password are required' });
+        if (errors.length > 0) {
+            return res.status(400).json({ error: errors.join(', ') });
+        }
+
+        const { name, email, password, timezone } = trimmedFields;
+
+        // Validate email format
+        if (!validateEmail(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+
+        // Validate password
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+            return res.status(400).json({ error: passwordValidation.message });
         }
 
         // Check if email already exists
@@ -220,7 +300,7 @@ app.post('/trainees', async (req, res) => {
                 name,
                 email,
                 password, // Use hashedPassword in production
-                timezone
+                timezone: timezone || null
             },
             select: {
                 id: true,
@@ -271,14 +351,47 @@ app.get('/trainees/:traineeId', authenticateToken, async (req, res) => {
 app.patch('/trainees/:traineeId', authenticateToken, async (req, res) => {
     try {
         const { traineeId } = req.params;
-        const { name, email, password, timezone } = req.body;
+        const { trimmedFields } = trimAndValidateFields(req.body);
+        const { name, email, password, timezone } = trimmedFields;
 
-        // Build update object dynamically
+        // Build update object dynamically with validation
         const updateData = {};
-        if (name !== undefined) updateData.name = name;
-        if (email !== undefined) updateData.email = email;
-        if (password !== undefined) updateData.password = password; // Hash in production
-        if (timezone !== undefined) updateData.timezone = timezone;
+        const errors = [];
+
+        if (name !== undefined) {
+            if (name === '') {
+                errors.push('Name cannot be empty');
+            } else {
+                updateData.name = name;
+            }
+        }
+
+        if (email !== undefined) {
+            if (email === '') {
+                errors.push('Email cannot be empty');
+            } else if (!validateEmail(email)) {
+                errors.push('Invalid email format');
+            } else {
+                updateData.email = email;
+            }
+        }
+
+        if (password !== undefined) {
+            const passwordValidation = validatePassword(password);
+            if (!passwordValidation.isValid) {
+                errors.push(passwordValidation.message);
+            } else {
+                updateData.password = password; // Hash in production
+            }
+        }
+
+        if (timezone !== undefined) {
+            updateData.timezone = timezone || null;
+        }
+
+        if (errors.length > 0) {
+            return res.status(400).json({ error: errors.join(', ') });
+        }
 
         const updatedTrainee = await prisma.trainee.update({
             where: { id: traineeId },
@@ -297,6 +410,9 @@ app.patch('/trainees/:traineeId', authenticateToken, async (req, res) => {
     } catch (error) {
         if (error.code === 'P2025') {
             return res.status(404).json({ error: 'Trainee not found' });
+        }
+        if (error.code === 'P2002') {
+            return res.status(400).json({ error: 'Email is already in use' });
         }
         console.error('Update trainee error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -342,18 +458,24 @@ app.get('/workouts', authenticateToken, async (req, res) => {
 // Create a new workout type
 app.post('/workouts', authenticateToken, async (req, res) => {
     try {
-        const { name, duration, description, color } = req.body;
+        const { trimmedFields, errors } = trimAndValidateFields(req.body, ['name']);
 
-        if (!name || !duration) {
-            return res.status(400).json({ error: 'Name and duration are required' });
+        if (errors.length > 0) {
+            return res.status(400).json({ error: errors.join(', ') });
+        }
+
+        const { name, duration, description, color } = trimmedFields;
+
+        if (!duration || duration <= 0) {
+            return res.status(400).json({ error: 'Duration must be a positive number' });
         }
 
         const newWorkout = await prisma.workout.create({
             data: {
                 name,
-                duration,
-                description,
-                color
+                duration: parseInt(duration),
+                description: description || null,
+                color: color || null
             }
         });
 
@@ -388,14 +510,41 @@ app.get('/workouts/:workoutId', authenticateToken, async (req, res) => {
 app.patch('/workouts/:workoutId', authenticateToken, async (req, res) => {
     try {
         const { workoutId } = req.params;
-        const { name, duration, description, color } = req.body;
+        const { trimmedFields } = trimAndValidateFields(req.body);
+        const { name, duration, description, color } = trimmedFields;
 
-        // Build update object dynamically
+        // Build update object dynamically with validation
         const updateData = {};
-        if (name !== undefined) updateData.name = name;
-        if (duration !== undefined) updateData.duration = duration;
-        if (description !== undefined) updateData.description = description;
-        if (color !== undefined) updateData.color = color;
+        const errors = [];
+
+        if (name !== undefined) {
+            if (name === '') {
+                errors.push('Name cannot be empty');
+            } else {
+                updateData.name = name;
+            }
+        }
+
+        if (duration !== undefined) {
+            const durationNum = parseInt(duration);
+            if (isNaN(durationNum) || durationNum <= 0) {
+                errors.push('Duration must be a positive number');
+            } else {
+                updateData.duration = durationNum;
+            }
+        }
+
+        if (description !== undefined) {
+            updateData.description = description || null;
+        }
+
+        if (color !== undefined) {
+            updateData.color = color || null;
+        }
+
+        if (errors.length > 0) {
+            return res.status(400).json({ error: errors.join(', ') });
+        }
 
         const updatedWorkout = await prisma.workout.update({
             where: { id: workoutId },
@@ -476,10 +625,16 @@ app.get('/routines', authenticateToken, async (req, res) => {
 // Create a new routine
 app.post('/routines', authenticateToken, async (req, res) => {
     try {
-        const { userId, availability } = req.body;
+        const { trimmedFields, errors } = trimAndValidateFields(req.body, ['userId']);
 
-        if (!userId || !availability) {
-            return res.status(400).json({ error: 'userId and availability are required' });
+        if (errors.length > 0) {
+            return res.status(400).json({ error: errors.join(', ') });
+        }
+
+        const { userId, availability } = trimmedFields;
+
+        if (!availability) {
+            return res.status(400).json({ error: 'availability is required' });
         }
 
         // Check if trainee exists
@@ -643,10 +798,17 @@ app.get('/registrations', authenticateToken, async (req, res) => {
 // Register for a workout
 app.post('/registrations', authenticateToken, async (req, res) => {
     try {
-        const { eventId, userId, inviteeEmail, startTime, endTime, status } = req.body;
+        const { trimmedFields, errors } = trimAndValidateFields(req.body, ['eventId', 'userId', 'inviteeEmail', 'startTime']);
 
-        if (!eventId || !userId || !inviteeEmail || !startTime) {
-            return res.status(400).json({ error: 'eventId, userId, inviteeEmail, and startTime are required' });
+        if (errors.length > 0) {
+            return res.status(400).json({ error: errors.join(', ') });
+        }
+
+        const { eventId, userId, inviteeEmail, startTime, endTime, status } = trimmedFields;
+
+        // Validate email format
+        if (!validateEmail(inviteeEmail)) {
+            return res.status(400).json({ error: 'Invalid invitee email format' });
         }
 
         // Check if trainee exists
@@ -718,16 +880,46 @@ app.get('/registrations/:registrationId', authenticateToken, async (req, res) =>
 app.patch('/registrations/:registrationId', authenticateToken, async (req, res) => {
     try {
         const { registrationId } = req.params;
-        const { eventId, userId, inviteeEmail, startTime, endTime, status } = req.body;
+        const { trimmedFields } = trimAndValidateFields(req.body);
+        const { eventId, userId, inviteeEmail, startTime, endTime, status } = trimmedFields;
 
-        // Build update object dynamically
+        // Build update object dynamically with validation
         const updateData = {};
-        if (eventId !== undefined) updateData.eventId = eventId;
-        if (userId !== undefined) updateData.userId = userId;
-        if (inviteeEmail !== undefined) updateData.inviteeEmail = inviteeEmail;
+        const errors = [];
+
+        if (eventId !== undefined) {
+            if (eventId === '') {
+                errors.push('Event ID cannot be empty');
+            } else {
+                updateData.eventId = eventId;
+            }
+        }
+
+        if (userId !== undefined) {
+            if (userId === '') {
+                errors.push('User ID cannot be empty');
+            } else {
+                updateData.userId = userId;
+            }
+        }
+
+        if (inviteeEmail !== undefined) {
+            if (inviteeEmail === '') {
+                errors.push('Invitee email cannot be empty');
+            } else if (!validateEmail(inviteeEmail)) {
+                errors.push('Invalid invitee email format');
+            } else {
+                updateData.inviteeEmail = inviteeEmail;
+            }
+        }
+
         if (startTime !== undefined) updateData.startTime = new Date(startTime);
         if (endTime !== undefined) updateData.endTime = endTime ? new Date(endTime) : null;
         if (status !== undefined) updateData.status = status;
+
+        if (errors.length > 0) {
+            return res.status(400).json({ error: errors.join(', ') });
+        }
 
         const updatedRegistration = await prisma.registration.update({
             where: { id: registrationId },

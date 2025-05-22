@@ -344,3 +344,193 @@ tr:hover {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Validation message styles */
+.validation-message {
+    font-size: 12px;
+    margin-top: 5px;
+    display: none;
+    padding: 3px 0;
+}
+
+.validation-message.error {
+    color: #dc3545;
+}
+
+.validation-message.success {
+    color: #28a745;
+}
+
+/* Password requirements text */
+.password-requirements {
+    font-size: 11px;
+    color: #666;
+    margin-top: 5px;
+    display: block;
+    line-height: 1.3;
+}
+
+/* Enhanced form styling for validation */
+.form-group {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.form-group input:invalid {
+    border-color: #dc3545;
+}
+
+.form-group input:valid {
+    border-color: #28a745;
+}
+
+/* Error and success styling for inputs */
+input.error {
+    border-color: #dc3545 !important;
+    background-color: #fff5f5;
+}
+
+input.success {
+    border-color: #28a745 !important;
+    background-color: #f8fff8;
+}
+
+/* Enhanced error message styling */
+.error-message {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 12px;
+    border-radius: 5px;
+    margin: 10px 0;
+    display: none;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.success-message {
+    color: #155724;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    padding: 12px;
+    border-radius: 5px;
+    margin: 10px 0;
+    display: none;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Modal enhancements */
+.modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Form input focus enhancement */
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Better spacing for validation messages */
+.form-group label {
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+/* Responsive adjustments for validation */
+@media (max-width: 768px) {
+    .validation-message {
+        font-size: 11px;
+    }
+
+    .password-requirements {
+        font-size: 10px;
+    }
+
+    .error-message,
+    .success-message {
+        font-size: 13px;
+        padding: 10px;
+    }
+}
+
+/* Enhanced button states */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #6c757d;
+}
+
+.btn:disabled:hover {
+    background-color: #6c757d;
+}
+
+/* Loading state for forms */
+.form-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.form-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #ccc;
+    border-top-color: #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Input group styling */
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.input-group input {
+    flex: 1;
+}
+
+/* Required field indicator */
+label.required::after {
+    content: " *";
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Tooltip for validation */
+.validation-tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.validation-tooltip .tooltip-text {
+    visibility: hidden;
+    width: 200px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+}
+
+.validation-tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}

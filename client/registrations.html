@@ -37,7 +37,7 @@
                 <thead>
                 <tr>
                     <th>Trainee</th>
-                    <th>Event ID</th>
+                    <th>Workout</th>
                     <th>Start Time</th>
                     <th>End Time</th>
                     <th>Status</th>
@@ -68,36 +68,47 @@
             <input type="hidden" id="registration-id">
 
             <div class="form-group">
-                <label for="registration-trainee">Trainee:</label>
+                <label for="registration-trainee" class="required">Trainee:</label>
                 <select id="registration-trainee" name="userId" required>
                     <option value="">Select a trainee...</option>
                 </select>
+                <div id="trainee-validation" class="validation-message"></div>
             </div>
 
             <div class="form-group">
-                <label for="registration-event">Event ID:</label>
-                <input type="text" id="registration-event" name="eventId" required
-                       placeholder="Enter event/workout ID">
+                <label for="registration-workout" class="required">Workout:</label>
+                <select id="registration-workout" name="eventId" required>
+                    <option value="">Select a workout...</option>
+                </select>
+                <div id="workout-validation" class="validation-message"></div>
+                <small class="workout-info">
+                    Workout duration and description will be shown after selection
+                </small>
+                <div id="workout-details" class="workout-details"></div>
             </div>
 
             <div class="form-group">
-                <label for="registration-email">Invitee Email:</label>
+                <label for="registration-email" class="required">Invitee Email:</label>
                 <input type="email" id="registration-email" name="inviteeEmail" required
                        placeholder="Email for the registration">
+                <div id="email-validation" class="validation-message"></div>
             </div>
 
             <div class="form-group">
-                <label for="registration-start">Start Time:</label>
+                <label for="registration-start" class="required">Start Time:</label>
                 <input type="datetime-local" id="registration-start" name="startTime" required>
+                <div id="start-time-validation" class="validation-message"></div>
             </div>
 
             <div class="form-group">
                 <label for="registration-end">End Time:</label>
                 <input type="datetime-local" id="registration-end" name="endTime">
+                <small>Leave empty for automatic calculation based on workout duration</small>
+                <div id="end-time-validation" class="validation-message"></div>
             </div>
 
             <div class="form-group">
-                <label for="registration-status">Status:</label>
+                <label for="registration-status" class="required">Status:</label>
                 <select id="registration-status" name="status" required>
                     <option value="scheduled">Scheduled</option>
                     <option value="canceled">Canceled</option>
@@ -105,8 +116,10 @@
                 </select>
             </div>
 
-            <button type="submit" class="btn">Save</button>
-            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <div class="form-group">
+                <button type="submit" class="btn">Save</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
         </form>
     </div>
 </div>
@@ -115,5 +128,50 @@
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/registrations.js"></script>
+
+<style>
+    .workout-details {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        border: 1px solid #e9ecef;
+        display: none;
+    }
+
+    .workout-details h4 {
+        margin: 0 0 5px 0;
+        color: #495057;
+    }
+
+    .workout-details p {
+        margin: 0;
+        font-size: 14px;
+        color: #6c757d;
+    }
+
+    .workout-duration {
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    .workout-info {
+        font-size: 12px;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+
+    select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+
+    .form-group small {
+        display: block;
+        margin-top: 5px;
+        font-size: 12px;
+        color: #6c757d;
+    }
+</style>
 </body>
 </html>

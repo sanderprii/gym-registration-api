@@ -68,27 +68,37 @@
             <input type="hidden" id="trainee-id">
 
             <div class="form-group">
-                <label for="trainee-name">Name:</label>
+                <label for="trainee-name" class="required">Name:</label>
                 <input type="text" id="trainee-name" name="name" required>
+                <div id="name-validation" class="validation-message"></div>
             </div>
 
             <div class="form-group">
-                <label for="trainee-email">Email:</label>
+                <label for="trainee-email" class="required">Email:</label>
                 <input type="email" id="trainee-email" name="email" required>
+                <div id="email-validation" class="validation-message"></div>
             </div>
 
             <div class="form-group">
-                <label for="trainee-password">Password:</label>
+                <label for="trainee-password" class="required">Password:</label>
                 <input type="password" id="trainee-password" name="password" required>
+                <div id="password-validation" class="validation-message"></div>
+                <small class="password-requirements">
+                    Password must be at least 8 characters long and cannot contain only spaces.
+                    When editing, leave empty to keep existing password.
+                </small>
             </div>
 
             <div class="form-group">
                 <label for="trainee-timezone">Timezone:</label>
-                <input type="text" id="trainee-timezone" name="timezone" placeholder="e.g., Europe/Tallinn">
+                <input type="text" id="trainee-timezone" name="timezone" placeholder="e.g. Europe/Tallinn">
+                <small>Optional field. Examples: Europe/Tallinn, America/New_York</small>
             </div>
 
-            <button type="submit" class="btn">Save</button>
-            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <div class="form-group">
+                <button type="submit" class="btn">Save</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
         </form>
     </div>
 </div>

@@ -1,4 +1,4 @@
-// Trainees management functionality
+// Trainees management functionality with validation
 Auth.redirectIfNotLoggedIn();
 Auth.displayUserInfo();
 
@@ -84,6 +84,11 @@ function openCreateModal() {
     document.getElementById('modal-title').textContent = 'Add New Trainee';
     document.getElementById('trainee-form').reset();
     document.getElementById('trainee-id').value = '';
+    document.getElementById('trainee-password').setAttribute('required', '');
+
+    // Clear validation messages
+    clearValidationMessages();
+
     document.getElementById('trainee-modal').style.display = 'block';
 }
 
@@ -101,6 +106,9 @@ async function editTrainee(id) {
         document.getElementById('trainee-password').value = '';
         document.getElementById('trainee-password').removeAttribute('required');
 
+        // Clear validation messages
+        clearValidationMessages();
+
         document.getElementById('trainee-modal').style.display = 'block';
     } catch (error) {
         console.error('Error fetching trainee:', error);
@@ -112,6 +120,13 @@ function closeModal() {
     document.getElementById('trainee-modal').style.display = 'none';
     document.getElementById('modal-error').style.display = 'none';
     document.getElementById('trainee-password').setAttribute('required', '');
+    clearValidationMessages();
+}
+
+function clearValidationMessages() {
+    document.querySelectorAll('.validation-message').forEach(el => {
+        el.style.display = 'none';
+    });
 }
 
 // Delete trainee
@@ -151,6 +166,70 @@ function showSuccess(message) {
     }, 5000);
 }
 
+// Real-time validation setup
+function setupFormValidation() {
+    // Name validation
+    document.getElementById('trainee-name').addEventListener('input', function() {
+        const name = this.value;
+        const validationElement = document.getElementById('name-validation');
+
+        if (name === '') {
+            validationElement.style.display = 'none';
+            return;
+        }
+
+        if (name.trim() === '') {
+            validationElement.textContent = 'Nimi ei või sisaldada ainult tühikuid';
+            validationElement.style.color = 'red';
+            validationElement.style.display = 'block';
+        } else if (name !== name.trim()) {
+            validationElement.textContent = 'Nimi ei või alata ega lõppeda tühikutega';
+            validationElement.style.color = 'red';
+            validationElement.style.display = 'block';
+        } else {
+            validationElement.textContent = 'Nimi on kehtiv';
+            validationElement.style.color = 'green';
+            validationElement.style.display = 'block';
+        }
+    });
+
+    // Email validation
+    document.getElementById('trainee-email').addEventListener('input', function() {
+        const email = this.value;
+        const validationElement = document.getElementById('email-validation');
+
+        if (email === '') {
+            validationElement.style.display = 'none';
+            return;
+        }
+
+        if (email.trim() === '') {
+            validationElement.textContent = 'E-post ei või sisaldada ainult tühikuid';
+            validationElement.style.color = 'red';
+            validationElement.style.display = 'block';
+        } else if (email !== email.trim()) {
+            validationElement.textContent = 'E-post ei või alata ega lõppeda tühikutega';
+            validationElement.style.color = 'red';
+            validationElement.style.display = 'block';
+        } else if (Auth.validateEmail(email.trim())) {
+            validationElement.textContent = 'E-posti aadress on kehtiv';
+            validationElement.style.color = 'green';
+            validationElement.style.display = 'block';
+        } else {
+            validationElement.textContent = 'Vigane e-posti aadress';
+            validationElement.style.color = 'red';
+            validationElement.style.display = 'block';
+        }
+    });
+
+    // Password validation
+    document.getElementById('trainee-password').addEventListener('input', function() {
+        const password = this.value;
+        const validationElement = document.getElementById('password-validation');
+        Auth.displayPasswordValidation(password, validationElement);
+    });
+}
+
 // Modal event listeners
 document.querySelector('.close').addEventListener('click', closeModal);
 
@@ -169,20 +248,52 @@ document.getElementById('trainee-form').addEventListener('submit', async (e) => 
     const traineeData = Object.fromEntries(formData);
     const modalError = document.getElementById('modal-error');
 
-    // Remove empty password for edit operations
-    if (editingTraineeId && !traineeData.password) {
-        delete traineeData.password;
-    }
-
     try {
+        // Validate and trim fields
+        const requiredFields = editingTraineeId ?
+            ['name', 'email'] : // Password not required for updates
+            ['name', 'email', 'password'];
+
+        const { trimmedFields, errors } = Auth.trimAndValidateFields(traineeData, requiredFields);
+
+        if (errors.length > 0) {
+            throw new Error(errors.join(', '));
+        }
+
+        // Validate email format
+        if (!Auth.validateEmail(trimmedFields.email)) {
+            throw new Error('Vigane e-posti aadress');
+        }
+
+        // Validate password if provided
+        if (trimmedFields.password) {
+            const passwordValidation = Auth.validatePassword(trimmedFields.password);
+            if (!passwordValidation.isValid) {
+                throw new Error(passwordValidation.message);
+            }
+        }
+
+        // Check for whitespace issues in original values
+        if (traineeData.name !== traineeData.name.trim()) {
+            throw new Error('Nimi ei või alata ega lõppeda tühikutega');
+        }
+        if (traineeData.email !== traineeData.email.trim()) {
+            throw new Error('E-post ei või alata ega lõppeda tühikutega');
+        }
+
+        // Remove empty password for edit operations
+        if (editingTraineeId && !trimmedFields.password) {
+            delete trimmedFields.password;
+        }
+
         if (editingTraineeId) {
             // Update existing trainee
-            await api.updateTrainee(editingTraineeId, traineeData);
-            showSuccess('Trainee updated successfully');
+            await api.updateTrainee(editingTraineeId, trimmedFields);
+            showSuccess('Treenija andmed uuendatud edukalt');
         } else {
             // Create new trainee
-            await api.createTrainee(traineeData);
-            showSuccess('Trainee created successfully');
+            await api.createTrainee(trimmedFields);
+            showSuccess('Treenija loodud edukalt');
         }
 
         closeModal();
@@ -192,6 +303,11 @@ document.getElementById('trainee-form').addEventListener('submit', async (e) => 
         modalError.textContent = error.message;
         modalError.style.display = 'block';
     }
+});
+
+// Initialize validation when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setupFormValidation();
 });
 
 // Load trainees on page load
