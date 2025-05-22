@@ -75,7 +75,7 @@ gym-registration-api/
 
 1. **Clone the repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/sanderprii/gym-registration-api
 cd gym-registration-api
 ```
 
